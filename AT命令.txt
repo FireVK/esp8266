@@ -3,6 +3,7 @@ AT+RESTORE
 
 //设置波特率
 AT+CIOBAUD=57600
+AT+UART=57600,8,1,0,0
 
 //软复位
 AT+RST
@@ -58,6 +59,7 @@ AT+CIPSTART="TCP","192.168.1.112",82
 
 //多路连接
 AT+CIPSEND=0,5
+hello
 
 
 //或单连接

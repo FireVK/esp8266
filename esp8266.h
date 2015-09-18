@@ -4,6 +4,7 @@
 #define ATTEMPTS 10 //错误尝试次数
 #define MULT_CONNECT 1
 #define SINGLE_CONNECT 0
+#define DEBUG 0 
 #include "Arduino.h"
 #include <SoftwareSerial.h>
 
@@ -47,7 +48,7 @@ class ESP8266
     bool keepOnline();
     //以普通文本方式传输数据
     bool sendPacket(String data);
-
+	bool setGateway(String ip, String gateway , String netsubMask);
   private:
     SoftwareSerial *_serial;
     unsigned baudrate;

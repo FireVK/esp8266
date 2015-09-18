@@ -82,20 +82,21 @@ String ESP8266::getMessage() {
     _serial->readBytesUntil(',', buffer , 5);
     byte index = buffer[0] - 48;
     String response = read_esp_buffer(true);
-    String restr = "AT+CIPSEND=";//回复“OK”
-    restr += index;
-    restr += ",";
-    restr += 2;
-    _serial->println(restr);
-    delay(pausetime * 2);
-    restr = read_esp_buffer(true);
-    if (restr.indexOf(">") > -1) {
-      _serial->print("OK");
+    {
+        String restr = "AT+CIPSEND=";//回复“OK”
+        restr += index;
+        restr += ",";
+        restr += 7;
+        _serial->println(restr);
+        delay(pausetime * 2);
+        restr = read_esp_buffer(true);
+        if (restr.indexOf(">") > -1) {
+          _serial->print("auto_OK");
+        }
     }
     String close = "AT+CIPCLOSE=";
     close += index;
     _serial->println(close);
-    Serial.println(response);
     return response;
   } else {
     return "";
@@ -187,14 +188,15 @@ bool ESP8266::tryConnectWifi() {
 
 bool ESP8266::connectionMode(uint8_t mode) {
   read_esp_buffer(false);
-  Serial.print("Single connection mode ...");
+  Serial.print("connection mode ...");
   cmd = "AT+CIPMUX=";
   cmd += mode;
   _serial->println(cmd);
   delay(pausetime * 2);
   String response = read_esp_buffer(true);
   if (response.indexOf("OK") > -1 || response.indexOf("builded") > 1 ) {
-    Serial.println("OK!");
+    Serial.print(mode);
+    Serial.println("...OK!");
     return true;
   } else {
     Serial.println("Error");
@@ -231,28 +233,27 @@ bool ESP8266::connectServer(String type) {
     delay(pausetime);
   }
   String response = read_esp_buffer(true);
-  Serial.println(response);
   if (response.indexOf("OK") > -1 || response.indexOf("ALREADY") > -1) {
     return true;
   } else {
+    if(DEBUG) Serial.println("@connectServer():can not connected Server");
     return false;
   }
 }
 
 bool ESP8266::tryConnectServer(String type) {
-  Serial.print("Connecting server...>>");
+  if(DEBUG) Serial.print("Connecting server...>>");
   bool connected = false;
   for (int i = 0; i < ATTEMPTS; i++) {
-    Serial.print(i + 1);
     if (connectServer(type)) {
       connected = true;
       break;
     }
-    Serial.print("  >>");
+    Serial.print("Send again");
+    Serial.println(i + 1);
   }
-  Serial.println();
   if (!connected) {//连接失败尝试复位
-    Serial.println("Can not connect to this server ...");
+    Serial.println("Can not connect to this server ... Send fail");
     delay(pausetime * 2);
     for (int i = 0; i < ATTEMPTS; i++) {
       if (resetModule()) {
@@ -314,7 +315,8 @@ unsigned ESP8266::uploadPacket(String url, String *packet, unsigned len, unsigne
 
 bool ESP8266::sendPacket(String data) {
   read_esp_buffer(false);
-  Serial.println("Send packet ...>>  ");
+
+  if (DEBUG) Serial.println("Send packet ...>>  ");
   unsigned sendLen = data.length();
   cmd = "AT+CIPSEND=0,";
   cmd += sendLen;
@@ -326,13 +328,13 @@ bool ESP8266::sendPacket(String data) {
   }
   String response = read_esp_buffer(true);
   if (response.indexOf(">") == -1) {
-    Serial.println("Not find the \">\"");
+    Serial.println("Send fail,please send again!");
     _serial->println("AT+CIPCLOSE=1");
     return false;
   } else {
     _serial->print(data);
     delay(pausetime * 2);
-    Serial.println("ALL done ...");
+    if (DEBUG) Serial.println("ALL done ...");
     _serial->println("AT+CIPCLOSE=0");
     return true;
   }
@@ -404,6 +406,31 @@ bool ESP8266::setupCIP(uint8_t mode) {
   else {
     return false;
   }
+}
+
+bool ESP8266::setGateway(String ip, String gateway , String netsubMask){
+	String cmd = "AT+CIPSTA_CUR=\"";
+	cmd += ip;
+	cmd += "\",\"";
+	cmd += gateway;
+	cmd += "\",\"";
+	cmd += netsubMask;
+	cmd += "\"";
+	_serial->println(cmd);
+	unsigned timer = 0;
+  	while (_serial->available() < 15 && timer < 10) {
+    	timer++;
+    	delay(5);
+  	}
+	String response = read_esp_buffer(true);
+ 	if (response.indexOf("OK") > -1 || response.indexOf("builded") > -1) {
+    Serial.println("set gateway ok!");
+ 		return true;
+ 	}
+	else {
+    Serial.println("set gateway fail!");
+		return false;
+	}
 }
 
 /**
